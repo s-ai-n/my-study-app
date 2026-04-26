@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A-Level Ultimate Study Suite</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; }
+
+        /* Sidebar Navigation */
+        nav { width: 250px; height: 100vh; background: #1e293b; color: white; padding: 20px; position: fixed; }
+        nav h1 { font-size: 1.2rem; margin-bottom: 30px; color: #60a5fa; }
+        .nav-btn { display: block; width: 100%; padding: 12px; margin: 8px 0; border: none; background: transparent; color: white; text-align: left; cursor: pointer; border-radius: 5px; }
+        .nav-btn:hover, .nav-btn.active { background: var(--primary); }
+
+        /* Main Content */
+        main { margin-left: 280px; padding: 40px; width: 100%; max-width: 1000px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Dashboard Components */
+        .card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .timer-display { font-size: 3rem; font-weight: bold; text-align: center; margin: 20px 0; color: var(--primary); }
+        
+        textarea { width: 100%; height: 300px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; resize: vertical; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+        .btn-start { background: #10b981; color: white; }
+        .btn-save { background: var(--primary); color: white; }
+
+        .stats-badge { padding: 5px 10px; background: #e2e8f0; border-radius: 20px; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <h1>A-Level Mastery</h1>
+    <button class="nav-btn active" onclick="showTab('dash')">Dashboard</button>
+    <button class="nav-btn" onclick="showTab('law')">Law (Cases/AO3)</button>
+    <button class="nav-btn" onclick="showTab('econ')">Economics (Data)</button>
+    <button class="nav-btn" onclick="showTab('geo')">Geography</button>
+    <hr>
+    <div id="pomo-status" style="font-size: 0.8rem; opacity: 0.7; margin-top: 20px;">
+        Focus: 25:00
+    </div>
+</nav>
+
+<main>
+    <section id="dash" class="tab-content active">
+        <h2>Study Dashboard</h2>
+        <div class="grid">
+            <div class="card">
+                <h3>Pomodoro Timer</h3>
+                <div class="timer-display" id="timer">25:00</div>
+                <div style="text-align:center;">
+                    <button class="btn btn-start" onclick="toggleTimer()">Start/Pause</button>
+                    <button class="btn" onclick="resetTimer()">Reset</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Exam Countdown</h3>
+                <div id="countdown" style="font-size: 1.5rem; font-weight: bold;">-- Days Remaining</div>
+                <p>Target: Summer Exams 2026</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="law" class="tab-content">
+        <h2>Law: Cases & Evaluation</h2>
+        <div class="card">
+            <h3>Blurting Mode (Active Recall)</h3>
+            <p>Type everything you remember about <i>Non-Fatal Offences</i> or <i>Negligence</i>:</p>
+            <textarea id="law-blurt" placeholder="Start typing..."></textarea>
+            <br><br>
+            <button class="btn btn-save" onclick="saveData('law-blurt')">Save to LocalStorage</button>
+            <button class="btn" onclick="aiFeedback('law')">Get AI Feedback (Coming Soon)</button>
+        </div>
+    </section>
+
+    <section id="econ" class="tab-content">
+        <h2>Economics: Data Response</h2>
+        <div class="card">
+            <h3>Definition Drill</h3>
+            <div id="flashcard" class="card" style="background: #f1f5f9; text-align: center; cursor: pointer;" onclick="flipCard()">
+                <p id="card-text">Click to start Economics Drills</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<script>
+    // --- NAVIGATION LOGIC ---
+    function showTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    // --- POMODORO TIMER LOGIC ---
+    let timeLeft = 25 * 60;
+    let timerId = null;
+    let sessionsCompleted = 0;
+
+    function updateTimerDisplay() {
+        const mins = Math.floor(timeLeft / 60);
+        const secs = timeLeft % 60;
+        document.getElementById('timer').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    function toggleTimer() {
+        if (timerId) {
+            clearInterval(timerId);
+            timerId = null;
+        } else {
+            timerId = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerId);
+                    handleSessionEnd();
+                }
+            }, 1000);
+        }
+    }
+
+    function handleSessionEnd() {
+        sessionsCompleted++;
+        if (sessionsCompleted % 4 === 0) {
+            alert("Long break time! (30 mins)");
+            timeLeft = 30 * 60;
+        } else {
+            alert("Short break! (5 mins)");
+            timeLeft = 5 * 60;
+        }
+        updateTimerDisplay();
+    }
+
+    function resetTimer() {
+        clearInterval(timerId);
+        timerId = null;
+        timeLeft = 25 * 60;
+        updateTimerDisplay();
+    }
+
+    // --- DATA SAVING (LOCAL STORAGE) ---
+    function saveData(id) {
+        const content = document.getElementById(id).value;
+        localStorage.setItem(id, content);
+        alert("Progress saved locally!");
+    }
+
+    // Load data on start
+    window.onload = () => {
+        if(localStorage.getItem('law-blurt')) {
+            document.getElementById('law-blurt').value = localStorage.getItem('law-blurt');
+        }
+        updateCountdown();
+    };
+
+    // --- EXAM COUNTDOWN ---
+    function updateCountdown() {
+        const examDate = new Date('May 15, 2026').getTime();
+        const now = new Date().getTime();
+        const diff = examDate - now;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        document.getElementById('countdown').innerText = days + " Days to Exams";
+    }
+
+    // --- FLASHCARD LOGIC ---
+    const econCards = [
+        {q: "What is the Multiplier Effect?", a: "The process where an initial change in injections leads to a greater final change in real GDP."},
+        {q: "Define Scarcity", a: "Infinite wants vs finite resources."}
+    ];
+    let currentCard = 0;
+    let isFlipped = false;
+
+    function flipCard() {
+        const card = document.getElementById('card-text');
+        if (!isFlipped) {
+            card.innerText = econCards[currentCard].a;
+            isFlipped = true;
+        } else {
+            currentCard = (currentCard + 1) % econCards.length;
+            card.innerText = econCards[currentCard].q;
+            isFlipped = false;
+        }
+    }
+</script>
+
+</body>
+</html>
