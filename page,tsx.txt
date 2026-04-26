@@ -1,0 +1,294 @@
+import { useState, useEffect, useMemo } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+
+/*
+=========================================
+AUTOPILOT A-LEVEL AI TUTOR SYSTEM (vX)
+=========================================
+CORE IDEA:
+- System fully plans your revision automatically
+- Detects weak topics
+- Generates daily schedule
+- Forces adaptive practice
+- AI examiner + autoplan feedback loop
+=========================================
+*/
+
+export default function StudyApp() {
+  const [subject, setSubject] = useState("Law");
+  const [accuracy, setAccuracy] = useState(60);
+  const [sessions, setSessions] = useState(0);
+  const [history, setHistory] = useState([]);
+  const [examDate, setExamDate] = useState("");
+  const [weakTopics, setWeakTopics] = useState([]);
+
+  const daysLeft = examDate
+    ? Math.ceil((new Date(examDate) - new Date()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  /* =====================
+  AUTO LEARNING FEEDBACK LOOP
+  ===================== */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHistory(h => [...h.slice(-19), { t: Date.now(), v: accuracy }]);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [accuracy]);
+
+  /* =====================
+  AUTO WEAK TOPIC DETECTION
+  ===================== */
+  useEffect(() => {
+    if (accuracy < 70) {
+      setWeakTopics(prev => [...new Set([...prev, subject + " concepts"])]);
+    }
+  }, [accuracy, subject]);
+
+  return (
+    <div className="p-6 bg-black text-white min-h-screen grid gap-6">
+
+      <h1 className="text-4xl font-bold text-center">AUTOPILOT AI A-LEVEL TUTOR</h1>
+
+      {/* DASHBOARD */}
+      <div className="grid grid-cols-4 gap-4">
+        <Stat label="Sessions" value={sessions} />
+        <Stat label="Accuracy" value={`${accuracy}%`} />
+        <Stat label="Grade" value={accuracy > 80 ? "A" : accuracy > 65 ? "B" : "C"} />
+        <Stat label="Weak Topics" value={weakTopics.length} />
+      </div>
+
+      {/* EXAM TIMER */}
+      <Card>
+        <CardContent>
+          <h2>Exam Countdown</h2>
+          <input type="date" onChange={e => setExamDate(e.target.value)} />
+          {daysLeft && <p>{daysLeft} days remaining</p>}
+        </CardContent>
+      </Card>
+
+      {/* PERFORMANCE GRAPH */}
+      <Card>
+        <CardContent>
+          <h2>Autopilot Progress</h2>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={history}>
+              <XAxis dataKey="t" hide />
+              <YAxis domain={[0, 100]} />
+              <Tooltip />
+              <Line type="monotone" dataKey="v" stroke="#22c55e" />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* SUBJECT SWITCH */}
+      <div className="flex gap-3 justify-center">
+        {["Law", "Geography", "Economics"].map(s => (
+          <Button key={s} onClick={() => setSubject(s)}>{s}</Button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <AutopilotPlanner
+          subject={subject}
+          weakTopics={weakTopics}
+          examDate={examDate}
+        />
+
+        <FocusEngine setSessions={setSessions} />
+
+        <AdaptiveFlashcards
+          subject={subject}
+          setAccuracy={setAccuracy}
+        />
+
+        <AIExaminer setAccuracy={setAccuracy} />
+
+        <ExamGenerator subject={subject} setAccuracy={setAccuracy} />
+
+        <WeakTopicCenter weakTopics={weakTopics} />
+      </div>
+    </div>
+  );
+}
+
+/* =====================
+STAT CARD
+===================== */
+function Stat({ label, value }) {
+  return (
+    <Card>
+      <CardContent>
+        <p className="opacity-70">{label}</p>
+        <h2 className="text-2xl font-bold">{value}</h2>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* =====================
+AUTOPILOT PLANNER (CORE AI BRAIN)
+===================== */
+function AutopilotPlanner({ subject, weakTopics, examDate }) {
+  const plan = useMemo(() => {
+    const base = [
+      "Flashcards (spaced repetition)",
+      "Essay practice",
+      "Exam questions"
+    ];
+
+    const weak = weakTopics.length
+      ? weakTopics.map(w => "REVISE WEAK AREA: " + w)
+      : ["Maintain revision balance"];
+
+    const urgency = examDate
+      ? Math.max(1, Math.ceil((new Date(examDate) - new Date()) / 86400000))
+      : 10;
+
+    const adjusted = urgency < 7
+      ? ["FULL EXAM MODE DAILY", ...base]
+      : base;
+
+    return [...weak, ...adjusted];
+  }, [subject, weakTopics, examDate]);
+
+  return (
+    <Card>
+      <CardContent>
+        <h2>Autopilot Study Plan</h2>
+        <p className="opacity-70">AI-generated daily schedule</p>
+        {plan.map((p, i) => (
+          <p key={i}>• {p}</p>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* =====================
+FOCUS ENGINE
+===================== */
+function FocusEngine({ setSessions }) {
+  const [t, setT] = useState(1500);
+  const [run, setRun] = useState(false);
+
+  useEffect(() => {
+    let i;
+    if (run && t > 0) i = setInterval(() => setT(x => x - 1), 1000);
+    if (t === 0) setSessions(s => s + 1);
+    return () => clearInterval(i);
+  }, [run, t]);
+
+  return (
+    <Card>
+      <CardContent>
+        <h2>Focus Engine</h2>
+        <p className="text-2xl">{Math.floor(t / 60)}:{("0" + (t % 60)).slice(-2)}</p>
+        <Button onClick={() => setRun(true)}>Start Autopilot Focus</Button>
+        <Button onClick={() => setRun(false)}>Pause</Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* =====================
+ADAPTIVE FLASHCARDS
+===================== */
+function AdaptiveFlashcards({ subject, setAccuracy }) {
+  const [cards, setCards] = useState([]);
+
+  const due = cards.filter(c => c.next <= Date.now());
+
+  const review = (i, good) => {
+    let c = [...cards];
+    c[i].ease = good ? (c[i].ease || 1) * 1.6 : 1;
+    c[i].next = Date.now() + c[i].ease * 86400000;
+    setCards(c);
+    setAccuracy(x => Math.min(100, x + (good ? 2 : -2)));
+  };
+
+  return (
+    <Card>
+      <CardContent>
+        <h2>Autopilot Memory System</h2>
+        {due.map((c, i) => (
+          <div key={i} className="border p-2 mt-2">
+            <p>{c.q}</p>
+            <p>{c.a}</p>
+            <Button onClick={() => review(i, false)}>Hard</Button>
+            <Button onClick={() => review(i, true)}>Easy</Button>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* =====================
+AI EXAMINER (BACKEND LINK)
+===================== */
+function AIExaminer({ setAccuracy }) {
+  const [text, setText] = useState("");
+  const [fb, setFb] = useState("");
+
+  const mark = async () => {
+    const res = await fetch("/api/mark-essay", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ essay: text })
+    });
+
+    const data = await res.json();
+    setFb(data.feedback);
+    setAccuracy(x => Math.min(100, x + data.score));
+  };
+
+  return (
+    <Card>
+      <CardContent>
+        <h2>AI Examiner Engine</h2>
+        <textarea className="w-full h-32" value={text} onChange={e => setText(e.target.value)} />
+        <Button onClick={mark}>Autopilot Mark</Button>
+        <pre>{fb}</pre>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* =====================
+EXAM GENERATOR
+===================== */
+function ExamGenerator({ subject, setAccuracy }) {
+  const bank = {
+    Law: ["Negligence 25 marker", "Judicial precedent essay"],
+    Geography: ["Coastal management evaluation", "Urbanisation impacts"],
+    Economics: ["Inflation policies", "Market failure evaluation"]
+  };
+
+  const [i, setI] = useState(0);
+
+  return (
+    <Card>
+      <CardContent>
+        <h2>Autopilot Exam Generator</h2>
+        <p>{bank[subject][i]}</p>
+        <Button onClick={() => setI((i + 1) % bank[subject].length)}>Next</Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* =====================
+WEAK TOPIC CENTER
+===================== */
+function WeakTopicCenter({ weakTopics }) {
+  return (
+    <Card>
+      <CardContent>
+        <h2>Weak Topic AI Core</h2>
+        {weakTopics.map((w, i) => (
+          <p
